@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
-from __future__ import print_function 
+from __future__ import print_function
 import os
-import torch 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
@@ -44,7 +44,7 @@ torch.cuda.manual_seed(args.seed)
 
 # Hyper Parameters
 batch_size = 128
-learning_rate = args.lr 
+learning_rate = args.lr
 
 # load dataset
 if args.dataset=='mnist':
@@ -53,37 +53,37 @@ if args.dataset=='mnist':
     num_classes = 10
     args.n_epoch = 200
     train_dataset = MNIST(root='./data/',
-                                download=True,  
-                                train=True, 
+                                download=True,
+                                train=True,
                                 transform=transforms.ToTensor(),
                                 noise_type=args.noise_type,
                                 noise_rate=args.noise_rate
                                 )
-    
+
     test_dataset = MNIST(root='./data/',
-                               download=True,  
-                               train=False, 
+                               download=True,
+                               train=False,
                                transform=transforms.ToTensor(),
                                noise_type=args.noise_type,
                                noise_rate=args.noise_rate
                                 )
-    
+
 if args.dataset=='cifar10':
     input_channel=3
     init_epoch = 20
     num_classes = 10
     args.n_epoch = 200
     train_dataset = CIFAR10(root='./data/',
-                                download=True,  
-                                train=True, 
+                                download=True,
+                                train=True,
                                 transform=transforms.ToTensor(),
                                 noise_type=args.noise_type,
                                 noise_rate=args.noise_rate
                                 )
-    
+
     test_dataset = CIFAR10(root='./data/',
-                                download=True,  
-                                train=False, 
+                                download=True,
+                                train=False,
                                 transform=transforms.ToTensor(),
                                 noise_type=args.noise_type,
                                 noise_rate=args.noise_rate
@@ -95,16 +95,16 @@ if args.dataset=='cifar100':
     num_classes = 100
     args.n_epoch = 200
     train_dataset = CIFAR100(root='./data/',
-                                download=True,  
-                                train=True, 
+                                download=True,
+                                train=True,
                                 transform=transforms.ToTensor(),
                                 noise_type=args.noise_type,
                                 noise_rate=args.noise_rate
                                 )
-    
+
     test_dataset = CIFAR100(root='./data/',
-                                download=True,  
-                                train=False, 
+                                download=True,
+                                train=False,
                                 transform=transforms.ToTensor(),
                                 noise_type=args.noise_type,
                                 noise_rate=args.noise_rate
@@ -114,34 +114,34 @@ if args.dataset=='cifar100':
 if args.dataset=='news':
     init_epoch=0
     train_dataset = NewsGroups(root='./data/',
-                                train=True, 
+                                train=True,
                                 transform=transforms.ToTensor(),
                                 noise_type=args.noise_type,
                                 noise_rate=args.noise_rate
                                 )
-    
+
     test_dataset = NewsGroups(root='./data/',
-                               train=False, 
+                               train=False,
                                transform=transforms.ToTensor(),
                                noise_type=args.noise_type,
                                noise_rate=args.noise_rate
                                 )
     num_classes=train_dataset.num_classes
- 
+
 if args.dataset == 'imagenet_tiny':
     init_epoch = 100
     #data_root = '/home/xingyu/Data/phd/data/imagenet-tiny/tiny-imagenet-200'
     data_root = 'data/imagenet-tiny/tiny-imagenet-200'
-    train_kv = "train_noisy_%s_%s_kv_list.txt" % (args.noise_type, args.noise_rate) 
+    train_kv = "train_noisy_%s_%s_kv_list.txt" % (args.noise_type, args.noise_rate)
     test_kv = "val_kv_list.txt"
 
-    normalize = transforms.Normalize(mean=[0.4802, 0.4481, 0.3975], 
+    normalize = transforms.Normalize(mean=[0.4802, 0.4481, 0.3975],
                                      std =[0.2302, 0.2265, 0.2262])
 
     train_dataset = ImageFilelist(root=data_root, flist=os.path.join(data_root, train_kv),
                transform=transforms.Compose([transforms.RandomResizedCrop(56),
                transforms.RandomHorizontalFlip(),
-               transforms.ToTensor(), 
+               transforms.ToTensor(),
                normalize,
        ]))
 
@@ -174,8 +174,8 @@ for i in range(args.epoch_decay_start, args.n_epoch):
 def adjust_learning_rate(optimizer, epoch):
     for param_group in optimizer.param_groups:
         param_group['lr']=alpha_plan[epoch]
-        param_group['betas']=(beta1_plan[epoch], 0.999) 
-       
+        param_group['betas']=(beta1_plan[epoch], 0.999)
+
 # define drop rate schedule
 def gen_forget_rate(fr_type='type_1'):
     if fr_type=='type_1':
@@ -184,13 +184,13 @@ def gen_forget_rate(fr_type='type_1'):
 
     #if fr_type=='type_2':
     #    rate_schedule = np.ones(args.n_epoch)*forget_rate
-    #    rate_schedule[:args.num_gradual] = np.linspace(0, forget_rate, args.num_gradual) 
+    #    rate_schedule[:args.num_gradual] = np.linspace(0, forget_rate, args.num_gradual)
     #    rate_schedule[args.num_gradual:] = np.linspace(forget_rate, 2*forget_rate, args.n_epoch-args.num_gradual)
-        
+
     return rate_schedule
 
 rate_schedule = gen_forget_rate(args.fr_type)
-  
+
 save_dir = args.result_dir +'/' +args.dataset+'/%s/' % args.model_type
 
 if not os.path.exists(save_dir):
@@ -223,17 +223,17 @@ def accuracy(logit, target, topk=(1,)):
 # Train the Model
 def train(train_loader,epoch, model1, optimizer1, model2, optimizer2):
     print('Training %s...' % model_str)
-    
+
     train_total=0
-    train_correct=0 
+    train_correct=0
     train_total2=0
-    train_correct2=0 
+    train_correct2=0
 
     for i, (data, labels, indexes) in enumerate(train_loader):
         ind=indexes.cpu().numpy().transpose()
-      
+
         labels = Variable(labels).cuda()
-        
+
         if args.dataset=='news':
             data = Variable(data.long()).cuda()
         else:
@@ -251,8 +251,12 @@ def train(train_loader,epoch, model1, optimizer1, model2, optimizer2):
         if epoch < init_epoch:
             loss_1, loss_2, _, _ = loss_coteaching(logits1, logits2, labels, rate_schedule[epoch], ind, noise_or_not)
         else:
-            if args.model_type=='coteaching_plus':
+            if args.model_type == 'coteaching_plus':
                 loss_1, loss_2, _, _ = loss_coteaching_plus(logits1, logits2, labels, rate_schedule[epoch], ind, noise_or_not, epoch*i)
+            elif args.model_type == 'coteaching':
+                loss_1, loss_2, _, _ = loss_coteaching(logits1, logits2, labels, rate_schedule[epoch], ind, noise_or_not)
+            else:
+                raise NotImplementedError('Other models are not supported')
 
         optimizer1.zero_grad()
         loss_1.backward()
@@ -261,7 +265,7 @@ def train(train_loader,epoch, model1, optimizer1, model2, optimizer2):
         loss_2.backward()
         optimizer2.step()
         if (i+1) % args.print_freq == 0:
-            print('Epoch [%d/%d], Iter [%d/%d] Training Accuracy1: %.4F, Training Accuracy2: %.4f, Loss1: %.4f, Loss2: %.4f' 
+            print('Epoch [%d/%d], Iter [%d/%d] Training Accuracy1: %.4F, Training Accuracy2: %.4f, Loss1: %.4f, Loss2: %.4f'
                   %(epoch+1, args.n_epoch, i+1, len(train_dataset)//batch_size, prec1, prec2, loss_1.item(), loss_2.item()))
 
     train_acc1=float(train_correct)/float(train_total)
@@ -285,7 +289,7 @@ def evaluate(test_loader, model1, model2):
         total1 += labels.size(0)
         correct1 += (pred1.cpu() == labels.long()).sum()
 
-    model2.eval()    # Change model to 'eval' mode 
+    model2.eval()    # Change model to 'eval' mode
     correct2 = 0
     total2 = 0
     for data, labels, _ in test_loader:
@@ -298,7 +302,7 @@ def evaluate(test_loader, model1, model2):
         _, pred2 = torch.max(outputs2.data, 1)
         total2 += labels.size(0)
         correct2 += (pred2.cpu() == labels.long()).sum()
- 
+
     acc1 = 100*float(correct1)/float(total1)
     acc2 = 100*float(correct2)/float(total2)
     return acc1, acc2
@@ -307,13 +311,13 @@ def main():
     # Data Loader (Input Pipeline)
     print('loading dataset...')
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                               batch_size=batch_size, 
+                                               batch_size=batch_size,
                                                num_workers=args.num_workers,
                                                drop_last=True,
                                                shuffle=True)
-    
+
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                              batch_size=batch_size, 
+                                              batch_size=batch_size,
                                               num_workers=args.num_workers,
                                               drop_last=True,
                                               shuffle=False)
@@ -333,7 +337,7 @@ def main():
     clf1.cuda()
     print(clf1.parameters)
     optimizer1 = torch.optim.Adam(clf1.parameters(), lr=learning_rate)
-    
+
     if args.dataset == 'mnist':
         clf2 = MLPNet()
     if args.dataset == 'cifar10':
