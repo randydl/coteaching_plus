@@ -1,3 +1,4 @@
 data/news.pkl
 __pycache__/
 jupyter/
+*.bak*

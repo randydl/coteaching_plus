@@ -26,7 +26,7 @@ parser.add_argument('--noise_rate', type = float, help = 'corruption rate, shoul
 parser.add_argument('--forget_rate', type = float, help = 'forget rate', default = None)
 parser.add_argument('--noise_type', type = str, help='[pairflip, symmetric]', default='symmetric')
 parser.add_argument('--num_gradual', type = int, default = 10, help='how many epochs for linear drop rate. This parameter is equal to Ek for lambda(E) in the paper.')
-parser.add_argument('--dataset', type = str, help = 'mnist, cifar10, cifar100, or imagenet_tiny', default = 'mnist')
+parser.add_argument('--dataset', type = str, help = 'mnist, cifar10, cifar100, or imagenet_tiny', default = 'news')
 parser.add_argument('--n_epoch', type=int, default=200)
 parser.add_argument('--optimizer', type = str, default='adam')
 parser.add_argument('--seed', type=int, default=1)
@@ -35,7 +35,8 @@ parser.add_argument('--num_workers', type=int, default=4, help='how many subproc
 parser.add_argument('--epoch_decay_start', type=int, default=80)
 parser.add_argument('--model_type', type = str, help='[coteaching, coteaching_plus]', default='coteaching_plus')
 parser.add_argument('--fr_type', type = str, help='forget rate type', default='type_1')
-
+parser.add_argument('--TStop_AM', default=30, type=int, help='Stop epochs of AM training')
+parser.add_argument('--TStop_PH', default=40, type=int, help='Stop epochs of PH training')
 args = parser.parse_args()
 
 # Seed
@@ -196,7 +197,7 @@ save_dir = args.result_dir +'/' +args.dataset+'/%s/' % args.model_type
 if not os.path.exists(save_dir):
     os.system('mkdir -p %s' % save_dir)
 
-model_str = args.dataset + '_%s_' % args.model_type + args.noise_type + '_' + str(args.noise_rate)
+model_str = args.dataset + '_%s_' % args.model_type + args.noise_type + '_' + str(args.noise_rate) + f'_{str(args.TStop_AM)}_{str(args.TStop_PH)}'
 
 txtfile = save_dir + "/" + model_str + ".txt"
 nowTime=datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
@@ -375,7 +376,23 @@ def main():
         adjust_learning_rate(optimizer1, epoch)
         adjust_learning_rate(optimizer2, epoch)
 
+        if epoch < args.TStop_AM:
+            pass
+        elif epoch < args.TStop_PH:
+            clf1.if_stop_AM(1)
+            clf2.if_stop_AM(1)
+        elif epoch == args.TStop_PH:
+            clf1.if_stop_PH(1)
+            clf2.if_stop_PH(1)
+        else:
+            clf1.if_stop_AM(0)
+            clf1.if_stop_PH(0)
+            clf2.if_stop_AM(0)
+            clf2.if_stop_PH(0)
+
+        # train models
         train_acc1, train_acc2 = train(train_loader, epoch, clf1, optimizer1, clf2, optimizer2)
+
         # evaluate models
         test_acc1, test_acc2 = evaluate(test_loader, clf1, clf2)
         # save results
